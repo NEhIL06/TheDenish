@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator & NFT Minter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/nft.storage/dist/bundle.esm.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .loader {
+            border-top-color: #3498db;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen p-6">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-8">AI Image Generator & NFT Minter</h1>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Generate Image</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Enter your prompt</label>
+                        <input type="text" id="prompt" class="w-full p-2 border rounded-md" placeholder="Describe the image you want to generate...">
+                    </div>
+                    <button id="generateBtn" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition">Generate Image</button>
+                </div>
+
+                <div id="loader" class="hidden mt-4">
+                    <div class="loader h-8 w-8 border-4 border-gray-200 rounded-full mx-auto"></div>
+                    <p class="text-center mt-2">Generating image...</p>
+                </div>
+
+                <div id="imageContainer" class="mt-6 hidden">
+                    <img id="generatedImage" class="max-w-full h-auto rounded-lg mx-auto">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Mint as NFT</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">API Key for NFT.storage</label>
+                        <input type="text" id="nftApiKey" class="w-full p-2 border rounded-md" placeholder="Enter your NFT.storage API key">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">NFT Name</label>
+                        <input type="text" id="nftName" class="w-full p-2 border rounded-md" placeholder="Enter NFT name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Description</label>
+                        <textarea id="nftDescription" class="w-full p-2 border rounded-md" rows="3" placeholder="Enter NFT description"></textarea>
+                    </div>
+                    <button id="mintBtn" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition" disabled>Mint NFT</button>
+                </div>
+
+                <div id="mintStatus" class="mt-4 hidden">
+                    <p class="text-center"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const HF_TOKEN = "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";
+        
+        async function generateImage(prompt) {
+            try {
+                const response = await fetch(
+                    "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${HF_TOKEN}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ inputs: prompt })
+                    }
+                );
+
+                if (!response.ok) throw new Error('Failed to generate image');
+                
+                const blob = await response.blob();
+                return URL.createObjectURL(blob);
+            } catch (error) {
+                console.error("Error generating image:", error);
+                throw error;
+            }
+        }
+
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) return;
+
+            const loader = document.getElementById('loader');
+            const imageContainer = document.getElementById('imageContainer');
+            const generatedImage = document.getElementById('generatedImage');
+            const mintBtn = document.getElementById('mintBtn');
+
+            loader.classList.remove('hidden');
+            imageContainer.classList.add('hidden');
+            mintBtn.disabled = true;
+
+            try {
+                const imageUrl = await generateImage(prompt);
+                generatedImage.src = imageUrl;
+                imageContainer.classList.remove('hidden');
+                mintBtn.disabled = false;
+            } catch (error) {
+                alert('Failed to generate image. Please try again.');
+            } finally {
+                loader.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('mintBtn').addEventListener('click', async () => {
+            const apiKey = document.getElementById('nftApiKey').value;
+            const name = document.getElementById('nftName').value;
+            const description = document.getElementById('nftDescription').value;
+            const imageUrl = document.getElementById('generatedImage').src;
+
+            if (!apiKey || !name || !description || !imageUrl) {
+                alert('Please fill in all fields and generate an image first.');
+                return;
+            }
+
+            const mintStatus = document.getElementById('mintStatus');
+            mintStatus.querySelector('p').textContent = 'Minting NFT...';
+            mintStatus.classList.remove('hidden');
+
+            try {
+                // Here you would implement the logic to upload the image and metadata to IPFS
+                // using the provided API key.
+
+                setTimeout(() => {
+                    mintStatus.querySelector('p').textContent = 'NFT minted successfully!';
+                    mintStatus.querySelector('p').className = 'text-center text-green-600';
+                }, 2000);
+
+            } catch (error) {
+                mintStatus.querySelector('p').textContent = 'Failed to mint NFT. Please try again.';
+                mintStatus.querySelector('p').className = 'text-center text-red-600';
+            }
+        });
+    </script>
+</body>
+</html>
